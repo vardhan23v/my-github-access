@@ -12,6 +12,7 @@ import {
   updateReadme,
 } from "@/lib/github.functions";
 import type { GitHubProfile, ReadmeInfo, Repo } from "@/lib/github";
+import { collapseContext, diffLines } from "@/lib/diff";
 import {
   BADGE_OPTIONS,
   DEFAULT_BADGE_OPTIONS,
@@ -102,6 +103,8 @@ function Index() {
   const [readmeInfo, setReadmeInfo] = useState<ReadmeInfo>(null);
   const [loading, setLoading] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [commitMessage, setCommitMessage] = useState("");
+  const [showDiff, setShowDiff] = useState(false);
   const [status, setStatus] = useState<{
     type: "success" | "error";
     message: string;
@@ -252,6 +255,13 @@ function Index() {
     try {
       const info = await getReadmeInfo({ data: { owner, repo } });
       setReadmeInfo(info);
+      setCommitMessage((prev) =>
+        prev.trim()
+          ? prev
+          : info
+            ? "docs: update portfolio README"
+            : "docs: add portfolio README"
+      );
     } catch (error) {
       setReadmeInfo(null);
       setStatus({
@@ -262,10 +272,23 @@ function Index() {
     }
   };
 
+  // Diff between the README currently on GitHub and what we are about to push.
+  const diff = useMemo(
+    () => diffLines(readmeInfo?.content ?? "", markdown),
+    [readmeInfo, markdown]
+  );
+  const diffRows = useMemo(() => collapseContext(diff.lines), [diff.lines]);
+  const hasChanges = diff.additions > 0 || diff.deletions > 0;
+
   const handlePublish = async () => {
     const parsed = parseRepoInput(targetInput);
     if (!parsed) {
       setStatus({ type: "error", message: "Target repo format is invalid." });
+      return;
+    }
+    const message = commitMessage.trim();
+    if (!message) {
+      setStatus({ type: "error", message: "Enter a commit message first." });
       return;
     }
     const [owner, repo] = parsed;
@@ -276,7 +299,7 @@ function Index() {
         data: {
           owner,
           repo,
-          message: "Update portfolio README",
+          message,
           content: markdown,
           sha: readmeInfo?.sha,
         },
@@ -287,6 +310,7 @@ function Index() {
           ? `README published. View it: ${result.url}`
           : "README published successfully.",
       });
+      setShowDiff(false);
       await loadReadme();
     } catch (error) {
       setStatus({
@@ -706,16 +730,183 @@ function Index() {
               </div>
 
 
-              <div className="border-t border-border p-4">
-                <button
-                  onClick={handlePublish}
-                  disabled={publishing || !markdown}
-                  className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
-                >
-                  {publishing ? "Publishing..." : "Publish README to GitHub"}
-                </button>
+              <div className="space-y-3 border-t border-border p-4">
+                <div>
+                  <label
+                    htmlFor="commit-message"
+                    className="mb-1 block text-sm font-medium"
+                  >
+                    Commit message
+                  </label>
+                  <input
+                    id="commit-message"
+                    value={commitMessage}
+                    onChange={(e) => setCommitMessage(e.target.value)}
+                    placeholder="docs: update portfolio README"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>
+                    {hasChanges ? (
+                      <>
+                        <span className="font-medium text-emerald-600">
+                          +{diff.additions}
+                        </span>{" "}
+                        <span className="font-medium text-destructive">
+                          -{diff.deletions}
+                        </span>{" "}
+                        lines vs. the README on GitHub
+                      </>
+                    ) : (
+                      "No changes compared to the README on GitHub"
+                    )}
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <button
+                    onClick={() => setShowDiff(true)}
+                    disabled={!markdown}
+                    className="flex-1 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent disabled:opacity-60"
+                  >
+                    Review diff
+                  </button>
+                  <button
+                    onClick={() => setShowDiff(true)}
+                    disabled={publishing || !markdown || !commitMessage.trim()}
+                    className="flex-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
+                  >
+                    {publishing ? "Publishing..." : "Publish to GitHub"}
+                  </button>
+                </div>
               </div>
             </section>
+          </div>
+        )}
+
+        {showDiff && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/50 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Review README changes"
+            onClick={() => !publishing && setShowDiff(false)}
+          >
+            <div
+              className="flex max-h-[85vh] w-full max-w-4xl flex-col rounded-xl border border-border bg-card shadow-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4 border-b border-border p-4">
+                <div>
+                  <h2 className="text-lg font-semibold">Review changes</h2>
+                  <p className="text-sm text-muted-foreground">
+                    {targetInput} · README.md ·{" "}
+                    <span className="font-medium text-emerald-600">
+                      +{diff.additions}
+                    </span>{" "}
+                    <span className="font-medium text-destructive">
+                      -{diff.deletions}
+                    </span>
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowDiff(false)}
+                  className="rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-accent"
+                  aria-label="Close diff"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-auto bg-background/50 p-1">
+                {hasChanges ? (
+                  <pre className="font-mono text-xs leading-relaxed">
+                    {diffRows.map((row, index) =>
+                      row.type === "skip" ? (
+                        <div
+                          key={index}
+                          className="bg-muted px-3 py-1 text-muted-foreground"
+                        >
+                          … {row.count} unchanged{" "}
+                          {row.count === 1 ? "line" : "lines"}
+                        </div>
+                      ) : (
+                        <div
+                          key={index}
+                          className={`flex gap-3 px-3 ${
+                            row.type === "add"
+                              ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                              : row.type === "remove"
+                                ? "bg-destructive/10 text-destructive"
+                                : ""
+                          }`}
+                        >
+                          <span className="w-10 shrink-0 select-none text-right text-muted-foreground">
+                            {row.oldNumber ?? ""}
+                          </span>
+                          <span className="w-10 shrink-0 select-none text-right text-muted-foreground">
+                            {row.newNumber ?? ""}
+                          </span>
+                          <span className="w-3 shrink-0 select-none">
+                            {row.type === "add"
+                              ? "+"
+                              : row.type === "remove"
+                                ? "-"
+                                : " "}
+                          </span>
+                          <span className="whitespace-pre-wrap break-words">
+                            {row.text || " "}
+                          </span>
+                        </div>
+                      )
+                    )}
+                  </pre>
+                ) : (
+                  <p className="p-6 text-center text-sm text-muted-foreground">
+                    Nothing to push — the generated README matches what is
+                    already on GitHub.
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-3 border-t border-border p-4">
+                <div>
+                  <label
+                    htmlFor="commit-message-modal"
+                    className="mb-1 block text-sm font-medium"
+                  >
+                    Commit message
+                  </label>
+                  <input
+                    id="commit-message-modal"
+                    value={commitMessage}
+                    onChange={(e) => setCommitMessage(e.target.value)}
+                    placeholder="docs: update portfolio README"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                  <button
+                    onClick={() => setShowDiff(false)}
+                    disabled={publishing}
+                    className="rounded-md border border-input bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent disabled:opacity-60"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handlePublish}
+                    disabled={
+                      publishing || !hasChanges || !commitMessage.trim()
+                    }
+                    className="rounded-md bg-primary px-6 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
+                  >
+                    {publishing ? "Pushing..." : "Confirm & push"}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
