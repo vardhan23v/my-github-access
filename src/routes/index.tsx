@@ -84,7 +84,11 @@ function Index() {
   const [includeStats, setIncludeStats] = useState(true);
 
   const [markdown, setMarkdown] = useState("");
-  const [activeTab, setActiveTab] = useState<"edit" | "preview">("preview");
+  const [template, setTemplate] = useState(DEFAULT_TEMPLATE);
+  const [manualEdit, setManualEdit] = useState(false);
+  const [activeTab, setActiveTab] = useState<"template" | "edit" | "preview">(
+    "preview"
+  );
   const [readmeInfo, setReadmeInfo] = useState<ReadmeInfo>(null);
   const [loading, setLoading] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -99,26 +103,34 @@ function Index() {
     [repos]
   );
 
-  // Auto-generate markdown whenever inputs change.
+  // Load a previously saved custom template (client-only).
+  useEffect(() => {
+    const saved = window.localStorage.getItem(TEMPLATE_STORAGE_KEY);
+    if (saved) setTemplate(saved);
+  }, []);
+
+  // Render the template with live data whenever inputs change.
   useEffect(() => {
     if (!profile) {
       setMarkdown("");
       return;
     }
+    if (manualEdit) return;
     const featured = sortedRepos.filter((r) => selectedRepoNames.has(r.name));
-    const md = generatePortfolioMarkdown({
-      profile,
-      repos,
-      tagline,
-      about,
-      email,
-      website,
-      twitter,
-      linkedIn,
-      featuredRepos: featured,
-      includeStats,
-    });
-    setMarkdown(md);
+    setMarkdown(
+      renderTemplate(template, {
+        profile,
+        repos,
+        featuredRepos: featured,
+        tagline,
+        about,
+        email,
+        website,
+        twitter,
+        linkedIn,
+        includeStats,
+      })
+    );
   }, [
     profile,
     repos,
@@ -131,7 +143,22 @@ function Index() {
     twitter,
     linkedIn,
     includeStats,
+    template,
+    manualEdit,
   ]);
+
+  const saveTemplate = (value: string) => {
+    setTemplate(value);
+    setManualEdit(false);
+    window.localStorage.setItem(TEMPLATE_STORAGE_KEY, value);
+  };
+
+  const resetTemplate = () => {
+    window.localStorage.removeItem(TEMPLATE_STORAGE_KEY);
+    setTemplate(DEFAULT_TEMPLATE);
+    setManualEdit(false);
+  };
+
 
   const loadData = async () => {
     setStatus(null);
