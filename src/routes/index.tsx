@@ -145,7 +145,8 @@ function Index() {
       setSelectedRepoNames(new Set(top));
 
       setTagline(
-        profileData.bio || "Full-stack developer building things for the web."
+        profileData.bio?.replace(/\r?\n/g, " ") ||
+          "Full-stack developer building things for the web."
       );
       setAbout(
         profileData.bio
