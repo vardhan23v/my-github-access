@@ -10,9 +10,16 @@ import {
   fetchReadme,
   fetchRepos,
   updateReadme,
-  generatePortfolioMarkdown,
 } from "@/lib/github.functions";
 import type { GitHubProfile, ReadmeInfo, Repo } from "@/lib/github";
+import {
+  DEFAULT_TEMPLATE,
+  TEMPLATE_VARIABLES,
+  renderTemplate,
+} from "@/lib/readme-template";
+
+const TEMPLATE_STORAGE_KEY = "readme-template";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
