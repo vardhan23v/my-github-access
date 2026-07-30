@@ -298,6 +298,8 @@ function Index() {
   }, []);
 
   const toggleRepo = (name: string) => {
+    // Manual editing turns auto-sync off so the choice sticks.
+    setAutoMode("manual");
     setSelectedRepoNames((prev) => {
       const next = new Set(prev);
       if (next.has(name)) next.delete(name);
@@ -305,6 +307,7 @@ function Index() {
       return next;
     });
   };
+
 
   return (
     <main className="min-h-screen bg-background text-foreground">
