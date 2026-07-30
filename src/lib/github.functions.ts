@@ -9,23 +9,19 @@ import {
 } from "./github.server";
 
 export const fetchProfile = createServerFn({ method: "POST" })
-  .inputValidator((data) =>
-    z.object({ username: z.string().min(1) }).parse(data)
-  )
+  .validator((data) => z.object({ username: z.string().min(1) }).parse(data))
   .handler(async ({ data }) => {
     return getUserProfile(data.username);
   });
 
 export const fetchRepos = createServerFn({ method: "POST" })
-  .inputValidator((data) =>
-    z.object({ username: z.string().min(1) }).parse(data)
-  )
+  .validator((data) => z.object({ username: z.string().min(1) }).parse(data))
   .handler(async ({ data }) => {
     return getUserRepos(data.username);
   });
 
 export const fetchReadme = createServerFn({ method: "POST" })
-  .inputValidator((data) =>
+  .validator((data) =>
     z.object({ owner: z.string().min(1), repo: z.string().min(1) }).parse(data)
   )
   .handler(async ({ data }) => {
@@ -33,7 +29,7 @@ export const fetchReadme = createServerFn({ method: "POST" })
   });
 
 export const updateReadme = createServerFn({ method: "POST" })
-  .inputValidator((data) =>
+  .validator((data) =>
     z
       .object({
         owner: z.string().min(1),
