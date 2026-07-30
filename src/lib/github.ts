@@ -62,11 +62,11 @@ export function generatePortfolioMarkdown({
     .slice(0, 8)
     .map(
       (lang) =>
-        `![${lang}](https://img.shields.io/badge/${encodeURIComponent(
+        `<img src="https://img.shields.io/badge/${encodeURIComponent(
           lang ?? ""
         )}-333?style=flat&logo=${encodeURIComponent(
           lang?.toLowerCase() ?? ""
-        )})`
+        )}" alt="${lang}" />`
     )
     .join(" ");
 
