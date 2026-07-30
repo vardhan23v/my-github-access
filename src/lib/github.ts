@@ -90,7 +90,7 @@ export function generatePortfolioMarkdown({
     .filter(Boolean)
     .join(" · ");
 
-  const visitorBadge = `![profile views](https://komarev.com/ghpvc/?username=${profile.login}&color=0e76a8)`;
+  const visitorBadge = `<img src="https://komarev.com/ghpvc/?username=${profile.login}&color=0e76a8" alt="profile views" />`;
 
   const statsSection = includeStats
     ? `\n## GitHub Stats\n\n<p align="center">\n  <img src="https://github-readme-stats.vercel.app/api?username=${profile.login}&show_icons=true&theme=transparent&hide_border=false" alt="GitHub stats" />\n</p>\n`
