@@ -13,10 +13,14 @@ import {
 } from "@/lib/github.functions";
 import type { GitHubProfile, ReadmeInfo, Repo } from "@/lib/github";
 import {
+  BADGE_OPTIONS,
+  DEFAULT_BADGE_OPTIONS,
   DEFAULT_TEMPLATE,
   TEMPLATE_VARIABLES,
   renderTemplate,
+  type BadgeOptions,
 } from "@/lib/readme-template";
+
 
 const TEMPLATE_STORAGE_KEY = "readme-template";
 
