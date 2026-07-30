@@ -11,6 +11,45 @@ export type TemplateContext = {
   twitter: string;
   linkedIn: string;
   includeStats: boolean;
+  badges?: Partial<BadgeOptions>;
+};
+
+/** Optional badge / stats images the user can toggle on or off. */
+export type BadgeOptions = {
+  visitorBadge: boolean;
+  languageBadges: boolean;
+  followersBadge: boolean;
+  starsBadge: boolean;
+  statsCard: boolean;
+  topLangsCard: boolean;
+  streakCard: boolean;
+  trophies: boolean;
+};
+
+export const BADGE_OPTIONS: {
+  key: keyof BadgeOptions;
+  label: string;
+  hint: string;
+}[] = [
+  { key: "visitorBadge", label: "Profile views", hint: "Visitor counter badge" },
+  { key: "languageBadges", label: "Language badges", hint: "Shields.io tech badges" },
+  { key: "followersBadge", label: "Followers badge", hint: "GitHub followers count" },
+  { key: "starsBadge", label: "Stars badge", hint: "Total stars count" },
+  { key: "statsCard", label: "GitHub stats card", hint: "Commits, PRs, issues" },
+  { key: "topLangsCard", label: "Top languages card", hint: "Most used languages" },
+  { key: "streakCard", label: "Streak card", hint: "Current contribution streak" },
+  { key: "trophies", label: "Trophy case", hint: "GitHub profile trophies" },
+];
+
+export const DEFAULT_BADGE_OPTIONS: BadgeOptions = {
+  visitorBadge: true,
+  languageBadges: true,
+  followersBadge: false,
+  starsBadge: false,
+  statsCard: true,
+  topLangsCard: false,
+  streakCard: false,
+  trophies: false,
 };
 
 export const DEFAULT_TEMPLATE = `<h1 align="center">Hi 👋, I'm {{name}}</h1>
@@ -20,15 +59,17 @@ export const DEFAULT_TEMPLATE = `<h1 align="center">Hi 👋, I'm {{name}}</h1>
   <img src="{{avatar}}" width="120" style="border-radius: 50%" alt="{{name}}" />
 </p>
 
-<p align="center">{{visitorBadge}}</p>
+<p align="center">{{badgeRow}}</p>
 
 ## About Me
 
 {{about}}
 
+{{#if languageBadges}}
 ## Tech & Tools
 
 <p align="center">{{languageBadges}}</p>
+{{/if}}
 
 ## Featured Projects
 
@@ -40,8 +81,12 @@ export const DEFAULT_TEMPLATE = `<h1 align="center">Hi 👋, I'm {{name}}</h1>
 ## GitHub Stats
 
 <p align="center">
-  <img src="https://github-readme-stats.vercel.app/api?username={{username}}&show_icons=true&theme=transparent" alt="GitHub stats" />
+  {{statsCard}}
+  {{topLangsCard}}
+  {{streakCard}}
 </p>
+
+<p align="center">{{trophies}}</p>
 {{/if}}
 
 ## Connect With Me
@@ -69,6 +114,13 @@ export const TEMPLATE_VARIABLES: { token: string; description: string }[] = [
   { token: "{{languageList}}", description: "Comma-separated languages" },
   { token: "{{totalStars}}", description: "Stars across all repos" },
   { token: "{{visitorBadge}}", description: "Profile views badge" },
+  { token: "{{followersBadge}}", description: "Followers badge" },
+  { token: "{{starsBadge}}", description: "Total stars badge" },
+  { token: "{{badgeRow}}", description: "All enabled inline badges in one row" },
+  { token: "{{statsCard}}", description: "GitHub stats card image" },
+  { token: "{{topLangsCard}}", description: "Top languages card image" },
+  { token: "{{streakCard}}", description: "Contribution streak card image" },
+  { token: "{{trophies}}", description: "GitHub trophy case image" },
   {
     token: "{{#projects}} … {{/projects}}",
     description:
@@ -86,13 +138,14 @@ function escapeAll(str: string) {
 
 export function renderTemplate(template: string, ctx: TemplateContext): string {
   const { profile, repos, featuredRepos } = ctx;
+  const badges: BadgeOptions = { ...DEFAULT_BADGE_OPTIONS, ...(ctx.badges ?? {}) };
   const displayName = profile.name || profile.login;
 
   const languages = Array.from(
     new Set(repos.map((r) => r.language).filter(Boolean))
   ) as string[];
 
-  const languageBadges = languages
+  const languageBadgesMarkup = languages
     .slice(0, 8)
     .map(
       (lang) =>
