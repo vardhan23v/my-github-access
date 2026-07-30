@@ -10,9 +10,16 @@ import {
   fetchReadme,
   fetchRepos,
   updateReadme,
-  generatePortfolioMarkdown,
 } from "@/lib/github.functions";
 import type { GitHubProfile, ReadmeInfo, Repo } from "@/lib/github";
+import {
+  DEFAULT_TEMPLATE,
+  TEMPLATE_VARIABLES,
+  renderTemplate,
+} from "@/lib/readme-template";
+
+const TEMPLATE_STORAGE_KEY = "readme-template";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -77,7 +84,11 @@ function Index() {
   const [includeStats, setIncludeStats] = useState(true);
 
   const [markdown, setMarkdown] = useState("");
-  const [activeTab, setActiveTab] = useState<"edit" | "preview">("preview");
+  const [template, setTemplate] = useState(DEFAULT_TEMPLATE);
+  const [manualEdit, setManualEdit] = useState(false);
+  const [activeTab, setActiveTab] = useState<"template" | "edit" | "preview">(
+    "preview"
+  );
   const [readmeInfo, setReadmeInfo] = useState<ReadmeInfo>(null);
   const [loading, setLoading] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -92,26 +103,34 @@ function Index() {
     [repos]
   );
 
-  // Auto-generate markdown whenever inputs change.
+  // Load a previously saved custom template (client-only).
+  useEffect(() => {
+    const saved = window.localStorage.getItem(TEMPLATE_STORAGE_KEY);
+    if (saved) setTemplate(saved);
+  }, []);
+
+  // Render the template with live data whenever inputs change.
   useEffect(() => {
     if (!profile) {
       setMarkdown("");
       return;
     }
+    if (manualEdit) return;
     const featured = sortedRepos.filter((r) => selectedRepoNames.has(r.name));
-    const md = generatePortfolioMarkdown({
-      profile,
-      repos,
-      tagline,
-      about,
-      email,
-      website,
-      twitter,
-      linkedIn,
-      featuredRepos: featured,
-      includeStats,
-    });
-    setMarkdown(md);
+    setMarkdown(
+      renderTemplate(template, {
+        profile,
+        repos,
+        featuredRepos: featured,
+        tagline,
+        about,
+        email,
+        website,
+        twitter,
+        linkedIn,
+        includeStats,
+      })
+    );
   }, [
     profile,
     repos,
@@ -124,7 +143,22 @@ function Index() {
     twitter,
     linkedIn,
     includeStats,
+    template,
+    manualEdit,
   ]);
+
+  const saveTemplate = (value: string) => {
+    setTemplate(value);
+    setManualEdit(false);
+    window.localStorage.setItem(TEMPLATE_STORAGE_KEY, value);
+  };
+
+  const resetTemplate = () => {
+    window.localStorage.removeItem(TEMPLATE_STORAGE_KEY);
+    setTemplate(DEFAULT_TEMPLATE);
+    setManualEdit(false);
+  };
+
 
   const loadData = async () => {
     setStatus(null);
@@ -428,46 +462,107 @@ function Index() {
               </div>
             </section>
 
-            {/* Preview / raw */}
-            <section className="flex h-full flex-col rounded-xl border border-border bg-card shadow-sm">
-              <div className="flex gap-2 border-b border-border p-3">
-                <button
-                  onClick={() => setActiveTab("preview")}
-                  className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-                    activeTab === "preview"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-transparent text-foreground hover:bg-accent"
-                  }`}
-                >
-                  Preview
-                </button>
-                <button
-                  onClick={() => setActiveTab("edit")}
-                  className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-                    activeTab === "edit"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-transparent text-foreground hover:bg-accent"
-                  }`}
-                >
-                  Edit Markdown
-                </button>
+            {/* Template / preview / raw */}
+            <section className="flex h-full flex-col rounded-xl border border-border bg-card shadow-sm lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)]">
+              <div className="flex flex-wrap items-center gap-2 border-b border-border p-3">
+                {(
+                  [
+                    ["preview", "Preview"],
+                    ["template", "Template"],
+                    ["edit", "Markdown"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => setActiveTab(key)}
+                    className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                      activeTab === key
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-transparent text-foreground hover:bg-accent"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+                {activeTab === "template" && (
+                  <button
+                    onClick={resetTemplate}
+                    className="ml-auto rounded-md border border-border px-3 py-2 text-xs font-medium hover:bg-accent"
+                  >
+                    Reset to default
+                  </button>
+                )}
+                {activeTab === "edit" && manualEdit && (
+                  <button
+                    onClick={() => setManualEdit(false)}
+                    className="ml-auto rounded-md border border-border px-3 py-2 text-xs font-medium hover:bg-accent"
+                  >
+                    Re-render from template
+                  </button>
+                )}
               </div>
 
-              <div className="flex-1 overflow-hidden p-4">
-                {activeTab === "preview" ? (
-                  <article className="prose prose-sm max-w-none dark:prose-invert overflow-y-auto rounded-md border border-border bg-background p-4">
+              <div className="flex min-h-[28rem] flex-1 flex-col overflow-hidden p-4">
+                {activeTab === "preview" && (
+                  <article className="prose prose-sm max-w-none dark:prose-invert flex-1 overflow-y-auto rounded-md border border-border bg-background p-4">
                     <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
                       {markdown}
                     </ReactMarkdown>
                   </article>
-                ) : (
+                )}
+
+                {activeTab === "template" && (
+                  <div className="flex flex-1 flex-col gap-3 overflow-hidden">
+                    <textarea
+                      value={template}
+                      onChange={(e) => saveTemplate(e.target.value)}
+                      spellCheck={false}
+                      className="min-h-56 flex-1 w-full resize-none rounded-md border border-input bg-background p-4 font-mono text-xs outline-none focus:ring-2 focus:ring-ring"
+                    />
+                    <div className="max-h-44 overflow-y-auto rounded-md border border-border bg-background p-3">
+                      <p className="mb-2 text-xs font-medium">
+                        Click a token to insert it at the end of your template
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {TEMPLATE_VARIABLES.map((v) => (
+                          <button
+                            key={v.token}
+                            title={v.description}
+                            onClick={() => saveTemplate(`${template}\n${v.token}`)}
+                            className="rounded-full border border-border px-2.5 py-1 font-mono text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground"
+                          >
+                            {v.token}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="rounded-md border border-border bg-background p-3">
+                      <p className="mb-2 text-xs font-medium">Live preview</p>
+                      <article className="prose prose-sm max-w-none dark:prose-invert max-h-64 overflow-y-auto">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          rehypePlugins={[rehypeRaw]}
+                        >
+                          {markdown}
+                        </ReactMarkdown>
+                      </article>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === "edit" && (
                   <textarea
                     value={markdown}
-                    onChange={(e) => setMarkdown(e.target.value)}
-                    className="h-full w-full resize-none rounded-md border border-input bg-background p-4 font-mono text-sm outline-none focus:ring-2 focus:ring-ring"
+                    onChange={(e) => {
+                      setManualEdit(true);
+                      setMarkdown(e.target.value);
+                    }}
+                    spellCheck={false}
+                    className="h-full min-h-72 w-full flex-1 resize-none rounded-md border border-input bg-background p-4 font-mono text-sm outline-none focus:ring-2 focus:ring-ring"
                   />
                 )}
               </div>
+
 
               <div className="border-t border-border p-4">
                 <button
