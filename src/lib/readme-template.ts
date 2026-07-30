@@ -169,6 +169,47 @@ export function renderTemplate(template: string, ctx: TemplateContext): string {
       .filter(Boolean)
       .join(" · ") || profile.html_url;
 
+  const totalStars = repos.reduce(
+    (sum, r) => sum + (r.stargazers_count || 0),
+    0
+  );
+
+  const on = (flag: boolean, markup: string) => (flag ? markup : "");
+
+  const visitorBadge = on(
+    badges.visitorBadge,
+    `<img src="https://komarev.com/ghpvc/?username=${profile.login}&color=0e76a8" alt="profile views" />`
+  );
+  const followersBadge = on(
+    badges.followersBadge,
+    `<img src="https://img.shields.io/github/followers/${profile.login}?label=Followers&style=flat&color=0e76a8" alt="followers" />`
+  );
+  const starsBadge = on(
+    badges.starsBadge,
+    `<img src="https://img.shields.io/badge/Total%20Stars-${totalStars}-0e76a8?style=flat&logo=github" alt="total stars" />`
+  );
+  const statsCard = on(
+    badges.statsCard,
+    `<img src="https://github-readme-stats.vercel.app/api?username=${profile.login}&show_icons=true&theme=transparent" alt="GitHub stats" />`
+  );
+  const topLangsCard = on(
+    badges.topLangsCard,
+    `<img src="https://github-readme-stats.vercel.app/api/top-langs/?username=${profile.login}&layout=compact&theme=transparent" alt="Top languages" />`
+  );
+  const streakCard = on(
+    badges.streakCard,
+    `<img src="https://streak-stats.demolab.com?user=${profile.login}&theme=transparent" alt="Contribution streak" />`
+  );
+  const trophies = on(
+    badges.trophies,
+    `<img src="https://github-profile-trophy.vercel.app/?username=${profile.login}&theme=flat&no-frame=true&column=7" alt="GitHub trophies" />`
+  );
+
+  const languageBadges = on(badges.languageBadges, languageBadgesMarkup);
+  const badgeRow = [visitorBadge, followersBadge, starsBadge]
+    .filter(Boolean)
+    .join(" ");
+
   const scalars: Record<string, string> = {
     name: displayName,
     username: profile.login,
@@ -187,11 +228,17 @@ export function renderTemplate(template: string, ctx: TemplateContext): string {
     socialLinks,
     languageBadges,
     languageList: languages.join(", "),
-    totalStars: String(
-      repos.reduce((sum, r) => sum + (r.stargazers_count || 0), 0)
-    ),
-    visitorBadge: `<img src="https://komarev.com/ghpvc/?username=${profile.login}&color=0e76a8" alt="profile views" />`,
+    totalStars: String(totalStars),
+    visitorBadge,
+    followersBadge,
+    starsBadge,
+    badgeRow,
+    statsCard,
+    topLangsCard,
+    streakCard,
+    trophies,
   };
+
 
   const replaceScalars = (input: string, extra: Record<string, string> = {}) =>
     input.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (match, key: string) => {
