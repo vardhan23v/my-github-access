@@ -456,7 +456,7 @@ function Index() {
               <div className="flex-1 overflow-hidden p-4">
                 {activeTab === "preview" ? (
                   <article className="prose prose-sm max-w-none dark:prose-invert overflow-y-auto rounded-md border border-border bg-background p-4">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
                       {markdown}
                     </ReactMarkdown>
                   </article>
