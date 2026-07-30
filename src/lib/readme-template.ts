@@ -255,7 +255,8 @@ export function renderTemplate(template: string, ctx: TemplateContext): string {
     (_match, key: string, body: string) => {
       const truthy =
         key === "stats"
-          ? ctx.includeStats
+          ? ctx.includeStats &&
+            Boolean(statsCard || topLangsCard || streakCard || trophies)
           : key === "projects"
             ? featuredRepos.length > 0
             : Boolean(scalars[key]);
