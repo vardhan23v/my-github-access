@@ -446,8 +446,66 @@ function Index() {
               </div>
 
               <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-                <h2 className="mb-4 text-lg font-semibold">Featured projects</h2>
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="text-lg font-semibold">Featured projects</h2>
+                  <span className="text-xs text-muted-foreground">
+                    {selectedRepoNames.size} selected
+                  </span>
+                </div>
+
+                <div className="mb-4 rounded-lg border border-border p-3">
+                  <p className="mb-2 text-sm font-medium">Auto-pick</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(
+                      [
+                        ["stars", "Most stars"],
+                        ["recent", "Recently updated"],
+                        ["manual", "Manual"],
+                      ] as const
+                    ).map(([key, label]) => (
+                      <button
+                        key={key}
+                        onClick={() => setAutoMode(key)}
+                        className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                          autoMode === key
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border text-muted-foreground hover:bg-accent hover:text-foreground"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {autoMode !== "manual" ? (
+                    <div className="mt-3">
+                      <label className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
+                        <span>How many projects</span>
+                        <span className="font-medium text-foreground">
+                          {autoCount}
+                        </span>
+                      </label>
+                      <input
+                        type="range"
+                        min={1}
+                        max={12}
+                        value={autoCount}
+                        onChange={(e) => setAutoCount(Number(e.target.value))}
+                        className="w-full accent-primary"
+                      />
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Auto-syncing with your README — ticking a project
+                        manually switches to Manual.
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Pick projects yourself below.
+                    </p>
+                  )}
+                </div>
+
                 <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+
                   {sortedRepos.map((repo) => (
                     <label
                       key={repo.id}
