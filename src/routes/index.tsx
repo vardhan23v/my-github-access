@@ -82,6 +82,11 @@ function Index() {
   const [twitter, setTwitter] = useState("");
   const [linkedIn, setLinkedIn] = useState("");
   const [includeStats, setIncludeStats] = useState(true);
+  const [autoMode, setAutoMode] = useState<"manual" | "stars" | "recent">(
+    "stars"
+  );
+  const [autoCount, setAutoCount] = useState(6);
+
 
   const [markdown, setMarkdown] = useState("");
   const [template, setTemplate] = useState(DEFAULT_TEMPLATE);
