@@ -125,8 +125,13 @@ export async function putReadme(
     body.sha = sha;
   }
 
-  return githubFetch<Record<string, unknown>>(
-    `/repos/${owner}/${repo}/contents/README.md`,
-    { method: "PUT", body }
-  );
+  const result = await githubFetch<{
+    commit?: { sha?: string };
+    html_url?: string;
+  }>(`/repos/${owner}/${repo}/contents/README.md`, { method: "PUT", body });
+
+  return {
+    sha: result.commit?.sha ?? null,
+    url: result.html_url ?? null,
+  };
 }
