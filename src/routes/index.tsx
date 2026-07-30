@@ -62,7 +62,7 @@ function Index() {
   const publishReadme = useServerFn(updateReadme);
 
   const [username, setUsername] = useState("vardhan23v");
-  const [targetInput, setTargetInput] = useState("vardhan23v/vardhan23v");
+  const [targetInput, setTargetInput] = useState("vardhan23v/my-github-access");
   const [profile, setProfile] = useState<GitHubProfile | null>(null);
   const [repos, setRepos] = useState<Repo[]>([]);
   const [selectedRepoNames, setSelectedRepoNames] = useState<Set<string>>(
