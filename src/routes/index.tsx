@@ -82,6 +82,11 @@ function Index() {
   const [twitter, setTwitter] = useState("");
   const [linkedIn, setLinkedIn] = useState("");
   const [includeStats, setIncludeStats] = useState(true);
+  const [autoMode, setAutoMode] = useState<"manual" | "stars" | "recent">(
+    "stars"
+  );
+  const [autoCount, setAutoCount] = useState(6);
+
 
   const [markdown, setMarkdown] = useState("");
   const [template, setTemplate] = useState(DEFAULT_TEMPLATE);
@@ -102,6 +107,29 @@ function Index() {
       [...repos].filter((r) => !r.private && !r.forks_count).sort((a, b) => b.stargazers_count - a.stargazers_count),
     [repos]
   );
+
+  // Repos ordered by the active auto-pick strategy.
+  const autoPicked = useMemo(() => {
+    if (autoMode === "manual") return [];
+    const ordered = [...sortedRepos].sort((a, b) =>
+      autoMode === "recent"
+        ? new Date(b.pushed_at).getTime() - new Date(a.pushed_at).getTime()
+        : b.stargazers_count - a.stargazers_count ||
+          new Date(b.pushed_at).getTime() - new Date(a.pushed_at).getTime()
+    );
+    return ordered.slice(0, autoCount).map((r) => r.name);
+  }, [sortedRepos, autoMode, autoCount]);
+
+  // Keep the featured selection in sync while auto-pick is on.
+  useEffect(() => {
+    if (autoMode === "manual") return;
+    setSelectedRepoNames((prev) => {
+      const same =
+        prev.size === autoPicked.length && autoPicked.every((n) => prev.has(n));
+      return same ? prev : new Set(autoPicked);
+    });
+  }, [autoMode, autoPicked]);
+
 
   // Load a previously saved custom template (client-only).
   useEffect(() => {
@@ -171,12 +199,15 @@ function Index() {
       setProfile(profileData);
       setRepos(reposData);
 
-      const nonForks = reposData.filter((r) => !r.private && !r.forks_count);
-      const top = nonForks
-        .sort((a, b) => b.stargazers_count - a.stargazers_count)
-        .slice(0, 6)
-        .map((r) => r.name);
-      setSelectedRepoNames(new Set(top));
+      if (autoMode === "manual") {
+        const nonForks = reposData.filter((r) => !r.private && !r.forks_count);
+        const top = nonForks
+          .sort((a, b) => b.stargazers_count - a.stargazers_count)
+          .slice(0, autoCount)
+          .map((r) => r.name);
+        setSelectedRepoNames(new Set(top));
+      }
+
 
       setTagline(
         profileData.bio?.replace(/\r?\n/g, " ") ||
@@ -267,6 +298,8 @@ function Index() {
   }, []);
 
   const toggleRepo = (name: string) => {
+    // Manual editing turns auto-sync off so the choice sticks.
+    setAutoMode("manual");
     setSelectedRepoNames((prev) => {
       const next = new Set(prev);
       if (next.has(name)) next.delete(name);
@@ -274,6 +307,7 @@ function Index() {
       return next;
     });
   };
+
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -412,8 +446,66 @@ function Index() {
               </div>
 
               <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-                <h2 className="mb-4 text-lg font-semibold">Featured projects</h2>
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="text-lg font-semibold">Featured projects</h2>
+                  <span className="text-xs text-muted-foreground">
+                    {selectedRepoNames.size} selected
+                  </span>
+                </div>
+
+                <div className="mb-4 rounded-lg border border-border p-3">
+                  <p className="mb-2 text-sm font-medium">Auto-pick</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(
+                      [
+                        ["stars", "Most stars"],
+                        ["recent", "Recently updated"],
+                        ["manual", "Manual"],
+                      ] as const
+                    ).map(([key, label]) => (
+                      <button
+                        key={key}
+                        onClick={() => setAutoMode(key)}
+                        className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                          autoMode === key
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border text-muted-foreground hover:bg-accent hover:text-foreground"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {autoMode !== "manual" ? (
+                    <div className="mt-3">
+                      <label className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
+                        <span>How many projects</span>
+                        <span className="font-medium text-foreground">
+                          {autoCount}
+                        </span>
+                      </label>
+                      <input
+                        type="range"
+                        min={1}
+                        max={12}
+                        value={autoCount}
+                        onChange={(e) => setAutoCount(Number(e.target.value))}
+                        className="w-full accent-primary"
+                      />
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Auto-syncing with your README — ticking a project
+                        manually switches to Manual.
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Pick projects yourself below.
+                    </p>
+                  )}
+                </div>
+
                 <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+
                   {sortedRepos.map((repo) => (
                     <label
                       key={repo.id}
