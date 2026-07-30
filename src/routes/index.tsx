@@ -108,6 +108,29 @@ function Index() {
     [repos]
   );
 
+  // Repos ordered by the active auto-pick strategy.
+  const autoPicked = useMemo(() => {
+    if (autoMode === "manual") return [];
+    const ordered = [...sortedRepos].sort((a, b) =>
+      autoMode === "recent"
+        ? new Date(b.pushed_at).getTime() - new Date(a.pushed_at).getTime()
+        : b.stargazers_count - a.stargazers_count ||
+          new Date(b.pushed_at).getTime() - new Date(a.pushed_at).getTime()
+    );
+    return ordered.slice(0, autoCount).map((r) => r.name);
+  }, [sortedRepos, autoMode, autoCount]);
+
+  // Keep the featured selection in sync while auto-pick is on.
+  useEffect(() => {
+    if (autoMode === "manual") return;
+    setSelectedRepoNames((prev) => {
+      const same =
+        prev.size === autoPicked.length && autoPicked.every((n) => prev.has(n));
+      return same ? prev : new Set(autoPicked);
+    });
+  }, [autoMode, autoPicked]);
+
+
   // Load a previously saved custom template (client-only).
   useEffect(() => {
     const saved = window.localStorage.getItem(TEMPLATE_STORAGE_KEY);
