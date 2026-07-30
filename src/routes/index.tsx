@@ -13,10 +13,14 @@ import {
 } from "@/lib/github.functions";
 import type { GitHubProfile, ReadmeInfo, Repo } from "@/lib/github";
 import {
+  BADGE_OPTIONS,
+  DEFAULT_BADGE_OPTIONS,
   DEFAULT_TEMPLATE,
   TEMPLATE_VARIABLES,
   renderTemplate,
+  type BadgeOptions,
 } from "@/lib/readme-template";
+
 
 const TEMPLATE_STORAGE_KEY = "readme-template";
 
@@ -82,6 +86,7 @@ function Index() {
   const [twitter, setTwitter] = useState("");
   const [linkedIn, setLinkedIn] = useState("");
   const [includeStats, setIncludeStats] = useState(true);
+  const [badges, setBadges] = useState<BadgeOptions>(DEFAULT_BADGE_OPTIONS);
   const [autoMode, setAutoMode] = useState<"manual" | "stars" | "recent">(
     "stars"
   );
@@ -157,6 +162,7 @@ function Index() {
         twitter,
         linkedIn,
         includeStats,
+        badges,
       })
     );
   }, [
@@ -171,6 +177,7 @@ function Index() {
     twitter,
     linkedIn,
     includeStats,
+    badges,
     template,
     manualEdit,
   ]);
@@ -541,16 +548,59 @@ function Index() {
               </div>
 
               <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-                <h2 className="mb-4 text-lg font-semibold">Options</h2>
-                <label className="flex items-center gap-3 text-sm">
+                <h2 className="mb-1 text-lg font-semibold">
+                  Badges &amp; stats
+                </h2>
+                <p className="mb-4 text-sm text-muted-foreground">
+                  Pick which badge and stats images appear in your README.
+                </p>
+                <label className="mb-3 flex items-center gap-3 text-sm font-medium">
                   <input
                     type="checkbox"
                     checked={includeStats}
                     onChange={(e) => setIncludeStats(e.target.checked)}
                     className="h-4 w-4 accent-primary"
                   />
-                  Include GitHub stats image
+                  Include the GitHub stats section
                 </label>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {BADGE_OPTIONS.map((opt) => {
+                    const isCard = opt.key !== "visitorBadge" &&
+                      opt.key !== "languageBadges" &&
+                      opt.key !== "followersBadge" &&
+                      opt.key !== "starsBadge";
+                    const disabled = isCard && !includeStats;
+                    return (
+                      <label
+                        key={opt.key}
+                        className={`flex items-start gap-3 rounded-lg border border-border p-3 text-sm transition-colors ${
+                          disabled
+                            ? "opacity-50"
+                            : "cursor-pointer hover:bg-accent"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          disabled={disabled}
+                          checked={badges[opt.key]}
+                          onChange={(e) =>
+                            setBadges((prev) => ({
+                              ...prev,
+                              [opt.key]: e.target.checked,
+                            }))
+                          }
+                          className="mt-0.5 h-4 w-4 accent-primary"
+                        />
+                        <span>
+                          <span className="block font-medium">{opt.label}</span>
+                          <span className="block text-xs text-muted-foreground">
+                            {opt.hint}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
             </section>
 
