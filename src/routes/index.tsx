@@ -199,12 +199,15 @@ function Index() {
       setProfile(profileData);
       setRepos(reposData);
 
-      const nonForks = reposData.filter((r) => !r.private && !r.forks_count);
-      const top = nonForks
-        .sort((a, b) => b.stargazers_count - a.stargazers_count)
-        .slice(0, 6)
-        .map((r) => r.name);
-      setSelectedRepoNames(new Set(top));
+      if (autoMode === "manual") {
+        const nonForks = reposData.filter((r) => !r.private && !r.forks_count);
+        const top = nonForks
+          .sort((a, b) => b.stargazers_count - a.stargazers_count)
+          .slice(0, autoCount)
+          .map((r) => r.name);
+        setSelectedRepoNames(new Set(top));
+      }
+
 
       setTagline(
         profileData.bio?.replace(/\r?\n/g, " ") ||
